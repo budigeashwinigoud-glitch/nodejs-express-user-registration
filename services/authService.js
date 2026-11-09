@@ -19,15 +19,27 @@ const authService = {
                 });
             }
 
-            const hashedPassword = await bcrypt.hash(user.password, 10);
+            try {
+                const hashedPassword = await bcrypt.hash(user.password, 10);
+                const newUser = {
+                    name: user.name,
+                    email: user.email,
+                    password: hashedPassword
+                };
 
-            const newUser = {
-                name: user.name,
-                email: user.email,
-                password: hashedPassword
-            };
+                User.create(newUser, (createErr, result) => {
+                    if (createErr && createErr.code === "ER_DUP_ENTRY") {
+                        return callback({
+                            type: "EMAIL_EXISTS",
+                            message: "Email already registered"
+                        });
+                    }
 
-            User.create(newUser, callback);
+                    return callback(createErr, result);
+                });
+            } catch (hashErr) {
+                return callback(hashErr);
+            }
         });
     },
 
@@ -51,10 +63,13 @@ const authService = {
             const user = results[0];
 
             // Compare entered password with hashed password
-            const passwordMatch = await bcrypt.compare(
-                password,
-                user.password
-            );
+            let passwordMatch;
+
+            try {
+                passwordMatch = await bcrypt.compare(password, user.password);
+            } catch (compareErr) {
+                return callback(compareErr);
+            }
 
             if (!passwordMatch) {
                 return callback({

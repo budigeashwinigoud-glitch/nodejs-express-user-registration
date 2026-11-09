@@ -5,18 +5,30 @@ const authController = {
     // REGISTER
     register: (req, res) => {
 
-        const { name, email, password } = req.body;
+        const { name, email, password } = req.body || {};
 
-        // Check required fields
-        if (!name || !email || !password) {
+        if (
+            typeof name !== "string" ||
+            typeof email !== "string" ||
+            typeof password !== "string" ||
+            !name.trim() ||
+            !email.trim() ||
+            !password
+        ) {
             return res.status(400).json({
                 message: "Name, email and password are required"
             });
         }
 
+        if (password.length < 6) {
+            return res.status(400).json({
+                message: "Password must be at least 6 characters"
+            });
+        }
+
         const user = {
-            name,
-            email,
+            name: name.trim(),
+            email: email.trim(),
             password
         };
 
@@ -30,9 +42,9 @@ const authController = {
                     });
                 }
 
+                console.error("Registration failed:", err.message);
                 return res.status(500).json({
-                    message: "Registration failed",
-                    error: err.message
+                    message: "Registration failed"
                 });
             }
 
@@ -46,16 +58,20 @@ const authController = {
     // LOGIN
     login: (req, res) => {
 
-        const { email, password } = req.body;
+        const { email, password } = req.body || {};
 
-        // Check required fields
-        if (!email || !password) {
+        if (
+            typeof email !== "string" ||
+            typeof password !== "string" ||
+            !email.trim() ||
+            !password
+        ) {
             return res.status(400).json({
                 message: "Email and password are required"
             });
         }
 
-        authService.loginUser(email, password, (err, user) => {
+        authService.loginUser(email.trim(), password, (err, user) => {
 
             if (err) {
 
@@ -65,9 +81,9 @@ const authController = {
                     });
                 }
 
+                console.error("Login failed:", err.message);
                 return res.status(500).json({
-                    message: "Login failed",
-                    error: err.message
+                    message: "Login failed"
                 });
             }
 
