@@ -46,6 +46,10 @@ Render supplies `PORT`. Configure the cloud MySQL provider to allow connections 
 
 The health endpoint verifies both the web process and its database connection. A healthy response is `{"status":"ok","database":"connected"}`.
 
+### Static page-only deployment
+
+For a page-only deployment without a database, the repository's [`render.yaml`](./render.yaml) defines a Render Static Site that publishes `public/`. Deploy this Blueprint from the repository. This does not run the Express server: registration and login API requests will not work on the static site.
+
 ## Postman smoke tests
 
 Replace `<BASE_URL>` with the deployed Render URL. Set `Content-Type: application/json` for POST requests.

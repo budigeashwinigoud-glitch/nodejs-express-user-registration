@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: registration-login-page
+    runtime: static
+    buildCommand: ""
+    staticPublishPath: ./public
