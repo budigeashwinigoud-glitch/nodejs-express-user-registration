@@ -30,25 +30,29 @@ All request bodies are JSON.
 
 Registration returns `400` when fields are missing or the password is shorter than 6 characters, and `409` when the email is already registered. Login returns `400` for missing fields and `401` for invalid credentials. Passwords are stored as bcrypt hashes.
 
-## Render deployment
+## Render backend deployment
 
-Create a Render Web Service from the existing GitHub repository. Set the root directory to the repository root, the runtime to Node, the build command to `npm install`, and the start command to `npm start`. Configure these environment variables in Render (never commit their values):
+The repository's [`render.yaml`](./render.yaml) defines a Node Web Service using `npm install`, `npm start`, and `/health`. Render supplies `PORT`. The service needs a reachable MySQL-compatible database before registration and login can work.
 
-- `DB_HOST`
-- `DB_USER`
-- `DB_PASSWORD`
-- `DB_NAME`
-- `DB_PORT`
-- `DB_SSL=true` if required by the database provider; set `DB_SSL_CA` to its CA certificate when one is required
-- `NODE_ENV=production`
+### Provision MySQL on Railway
 
-Render supplies `PORT`. Configure the cloud MySQL provider to allow connections from Render, then run `database/schema.sql` against the provisioned database before testing registration. Configure Render's health check path as `/health`.
+Render does not offer a managed MySQL database. One option is Railway's MySQL service:
 
-The health endpoint verifies both the web process and its database connection. A healthy response is `{"status":"ok","database":"connected"}`.
+1. Create a Railway account and a new project; review the current plan and usage charges first.
+2. Add a MySQL service to the project and wait for it to become available.
+3. In the MySQL service settings, enable **Networking → TCP Proxy** for its MySQL port. Render cannot use Railway's private service hostname because the services are on different platforms.
+4. Use the externally reachable TCP proxy hostname and port for `DB_HOST` and `DB_PORT`. Get `DB_USER`, `DB_PASSWORD`, and `DB_NAME` from the Railway MySQL service's variables. Do not use the private/internal host or expose these values in Git or chat.
+5. Connect a MySQL client to that public TCP endpoint and run [`database/schema.sql`](./database/schema.sql). This creates the `users` table if absent; it does not drop or overwrite existing data.
 
-### Static page-only deployment
+### Create the Render service
 
-For a page-only deployment without a database, the repository's [`render.yaml`](./render.yaml) defines a Render Static Site that publishes `public/`. Deploy this Blueprint from the repository. This does not run the Express server: registration and login API requests will not work on the static site.
+1. Open the [Render Blueprint deploy flow](https://render.com/deploy?repo=https://github.com/budigeashwinigoud-glitch/nodejs-express-user-registration) and connect GitHub if prompted.
+2. Review the Blueprint: it should create a **Node Web Service** named `user-registration-api`, in Singapore, on Render's free plan. Confirm any current plan limits before proceeding.
+3. Enter the MySQL connection values in Render's prompted secret/environment-variable fields. Set `DB_SSL` to `true` only if the database provider requires TLS; otherwise set it to `false`. Never put credentials into `render.yaml`.
+4. Create the Blueprint and wait for the service deploy. Check Render's deploy/runtime logs for startup or MySQL errors.
+5. Visit `https://<your-service>.onrender.com/health`. A healthy response is `{"status":"ok","database":"connected"}`. A `503` means the app cannot reach MySQL or the database is unavailable.
+
+The backend and frontend are served by the same Express service, so browser CORS is not enabled. The health endpoint verifies both the web process and its database connection.
 
 ## Postman smoke tests
 
